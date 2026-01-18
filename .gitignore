@@ -165,3 +165,6 @@ archive/
 logs/
 
 .python-version
+
+# Local model cache
+models_cache/

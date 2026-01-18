@@ -14,6 +14,9 @@ import time
 import os
 from termcolor import colored
 
+# Local cache directory for models (relative to project root)
+CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models_cache")
+
 
 class InferenceCLI:
 
@@ -84,6 +87,7 @@ class InferenceCLI:
 
         print(colored("Target model:", on_color="on_yellow"), target_model)
         print(colored("Drafter model:", on_color="on_yellow"), drafter_model)
+        print(colored("Cache directory:", on_color="on_yellow"), CACHE_DIR)
         print(colored("Loading models...", "light_grey"))
 
         self.target = AutoModelForCausalLM.from_pretrained(
@@ -91,19 +95,21 @@ class InferenceCLI:
             quantization_config=target_quantize,
             device_map=self.device,
             trust_remote_code=True,
+            cache_dir=CACHE_DIR,
         )
         self.target.eval()
 
         tokenizer_name = target_model
         if tokenizer_name != target_model:
             print(colored("Warning: Tokenizer is different from target model. Use with caution.", "red"))
-        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name, trust_remote_code=True)
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name, trust_remote_code=True, cache_dir=CACHE_DIR)
 
         self.drafter = AutoModelForCausalLM.from_pretrained(
             drafter_model,
             quantization_config=drafter_quantize,
             device_map=self.device,
             trust_remote_code=True,
+            cache_dir=CACHE_DIR,
         )
         self.drafter.eval()
         
