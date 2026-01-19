@@ -398,7 +398,13 @@ class InferenceCLI:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Speculative Decoding CLI")
-    parser.add_argument("--device", type=str, default="cuda", help="Device to use for inference")
+    parser.add_argument("--device", type=str, default=None, help="Device to use for inference (auto-detected if not specified)")
     args = parser.parse_args()
 
-    InferenceCLI(device=args.device)
+    # Auto-detect device if not specified
+    device = args.device
+    if device is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        print(f"Auto-detected device: {device}")
+
+    InferenceCLI(device=device)
