@@ -4,7 +4,10 @@
       "Bash(uv sync:*)",
       "Bash(python:*)",
       "Bash(uv run python:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(uv add:*)",
+      "Bash(uv pip list:*)",
+      "Bash(findstr:*)"
     ]
   }
 }

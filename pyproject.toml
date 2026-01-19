@@ -7,12 +7,12 @@ requires-python = ">=3.13"
 dependencies = [
     "accelerate>=1.12.0",
     "bitsandbytes>=0.49.1",
+    "modelscope>=1.0.0",
+    "quanto>=0.2.0",
     "rich>=14.2.0",
+    "sentencepiece>=0.2.1",
     "termcolor>=3.3.0",
     "tokenizers>=0.22.2",
-    "torch>=2.9.1",
-    "torchaudio>=2.9.1",
-    "torchvision>=0.24.1",
     "tqdm>=4.67.1",
     "transformers>=4.57.6",
 ]

@@ -5,17 +5,20 @@ import torch
 from sampling import autoregressive_generate, speculative_generate
 from ngram_assisted import OneLevelNGramStorage, NGramStorage, ngram_assisted_speculative_generate
 from utils.logits_processor import GreedyProcessor, MultinomialProcessor, TopKProcessor, NucleusProcessor, TopKNucleusProcessor
-from transformers import (
+from modelscope import (
     AutoTokenizer,
     AutoModelForCausalLM,
-    QuantoConfig,
 )
+from transformers import QuantoConfig
 import time
 import os
 from termcolor import colored
 
 # Local cache directory for models (relative to project root)
 CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models_cache")
+
+# Set ModelScope cache environment variable to use local directory
+os.environ["MODELSCOPE_CACHE"] = CACHE_DIR
 
 
 class InferenceCLI:
@@ -77,13 +80,13 @@ class InferenceCLI:
         self._run()
 
     def _load_models(self):
-        # Target model
-        target_model = "meta-llama/Llama-3.2-3B-Instruct"
-        target_quantize = QuantoConfig(weights="int8")  # QuantoConfig(weights="int8")  None
-        
-        # Drafter model
-        drafter_model = "meta-llama/Llama-3.2-1B-Instruct"
-        drafter_quantize = QuantoConfig(weights="int8")  # QuantoConfig(weights="int8") None
+        # ModelScope model IDs (equivalent to HuggingFace models)
+        target_model = "LLM-Research/Llama-3.2-3B-Instruct"
+        drafter_model = "LLM-Research/Llama-3.2-1B-Instruct"
+
+        # Quantization configuration (same as original)
+        target_quantize = QuantoConfig(weights="int8")
+        drafter_quantize = QuantoConfig(weights="int8")
 
         print(colored("Target model:", on_color="on_yellow"), target_model)
         print(colored("Drafter model:", on_color="on_yellow"), drafter_model)
@@ -99,10 +102,7 @@ class InferenceCLI:
         )
         self.target.eval()
 
-        tokenizer_name = target_model
-        if tokenizer_name != target_model:
-            print(colored("Warning: Tokenizer is different from target model. Use with caution.", "red"))
-        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name, trust_remote_code=True, cache_dir=CACHE_DIR)
+        self.tokenizer = AutoTokenizer.from_pretrained(target_model, trust_remote_code=True, cache_dir=CACHE_DIR)
 
         self.drafter = AutoModelForCausalLM.from_pretrained(
             drafter_model,
@@ -112,10 +112,10 @@ class InferenceCLI:
             cache_dir=CACHE_DIR,
         )
         self.drafter.eval()
-        
+
         self.ngram = NGramStorage(n=3, vocab_size=self.target.config.vocab_size)
-        
-        self.end_tokens = [self.tokenizer.eos_token_id, self.tokenizer.convert_tokens_to_ids("<|eot_id|>")] # "<|eot_id|>" is the end of turn token for Llama model.
+
+        self.end_tokens = [self.tokenizer.eos_token_id, self.tokenizer.convert_tokens_to_ids("<|eot_id|>")]
 
     def _perform_command(self, command: str):
         args = command.split(" ")
