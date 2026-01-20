@@ -13,6 +13,20 @@ dependencies = [
     "sentencepiece>=0.2.1",
     "termcolor>=3.3.0",
     "tokenizers>=0.22.2",
+    "torch",
+    "torchvision",
+    "torchaudio",
     "tqdm>=4.67.1",
     "transformers>=4.57.6",
+    "optimum-quanto",
 ]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu126" }
+torchvision = { index = "pytorch-cu126" }
+torchaudio = { index = "pytorch-cu126" }
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
