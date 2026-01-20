@@ -38,6 +38,11 @@ class InferenceCLI:
         self.dr = False
         self.cache = False
         self.target_gen = True
+        # EGAG
+        self.use_egag = False
+        self.gamma_min = 1
+        self.gamma_max = None
+        self.egag_ema_beta = 0.0
         # Ngram Assisted Generation
         self.ngram_gen = True
         self.ngram = None
@@ -162,6 +167,31 @@ class InferenceCLI:
             self.gamma = int(args[1])
             print(colored(f"Gamma: {int(args[1])}", on_color="on_blue"))
             return
+        if args[0] == "/egag":
+            self.use_egag = not self.use_egag
+            print(colored(f"EGAG: {self.use_egag}", on_color="on_blue"))
+            return
+        if args[0] == "/egag_gamma_min":
+            if len(args) < 2:
+                print(colored("Usage: /egag_gamma_min <value>", "red"))
+                return
+            self.gamma_min = int(args[1])
+            print(colored(f"EGAG gamma_min: {int(args[1])}", on_color="on_blue"))
+            return
+        if args[0] == "/egag_gamma_max":
+            if len(args) < 2:
+                print(colored("Usage: /egag_gamma_max <value>", "red"))
+                return
+            self.gamma_max = int(args[1])
+            print(colored(f"EGAG gamma_max: {int(args[1])}", on_color="on_blue"))
+            return
+        if args[0] == "/egag_ema":
+            if len(args) < 2:
+                print(colored("Usage: /egag_ema <value>", "red"))
+                return
+            self.egag_ema_beta = float(args[1])
+            print(colored(f"EGAG EMA beta: {float(args[1])}", on_color="on_blue"))
+            return
         if args[0] == "/clear":
             os.system("cls" if os.name == "nt" else "clear")
             return
@@ -255,6 +285,14 @@ class InferenceCLI:
         print(colored(f"\t{self.gen_len}", "blue"))
         print("/gamma <value>: set gamma")
         print(colored(f"\t{self.gamma}", "blue"))
+        print("/egag: toggle EGAG")
+        print(colored(f"\t{self.use_egag}", "green" if self.use_egag else "red"))
+        print("/egag_gamma_min <value>: set EGAG gamma_min")
+        print(colored(f"\t{self.gamma_min}", "blue"))
+        print("/egag_gamma_max <value>: set EGAG gamma_max")
+        print(colored(f"\t{self.gamma_max}", "blue"))
+        print("/egag_ema <value>: set EGAG EMA beta")
+        print(colored(f"\t{self.egag_ema_beta}", "blue"))
         print("/processor <processor_name> [args0] [args1] ...: set processor")
         print(colored(f"\t{self.selected_processor['name']}", "blue"))
         for arg_name, arg_value in self.selected_processor["args"].items():
@@ -293,6 +331,10 @@ class InferenceCLI:
                 tokenizer=self.tokenizer,
                 logits_processor=self.processor,
                 gamma=self.gamma,
+                use_egag=self.use_egag,
+                gamma_min=self.gamma_min,
+                gamma_max=self.gamma_max,
+                egag_ema_beta=self.egag_ema_beta,
                 max_gen_len=self.gen_len,
                 eos_tokens_id=self.end_tokens,
                 debug=self.debug,

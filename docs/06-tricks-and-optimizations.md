@@ -5,12 +5,13 @@
 - [1. 并行 Token 验证（核心优化）](#1-并行-token-验证核心优化)
 - [2. 首次 Target Pass](#2-首次-target-pass)
 - [3. 动态 Gamma 调整](#3-动态-gamma-调整)
-- [4. 多 EOS Token 支持](#4-多-eos-token-支持)
-- [5. Ngram 回退策略](#5-ngram-回退策略)
-- [6. Top-K Filler](#6-top-k-filler)
-- [7. 跳过样本调整](#7-跳过样本调整)
-- [8. 其他实现技巧](#8-其他实现技巧)
-- [9. 小结](#9-小结)
+- [4. 熵自适应 Gamma（EGAG）](#4-熵自适应-gammaegag)
+- [5. 多 EOS Token 支持](#5-多-eos-token-支持)
+- [6. Ngram 回退策略](#6-ngram-回退策略)
+- [7. Top-K Filler](#7-top-k-filler)
+- [8. 跳过样本调整](#8-跳过样本调整)
+- [9. 其他实现技巧](#9-其他实现技巧)
+- [10. 小结](#10-小结)
 
 ---
 
@@ -152,7 +153,40 @@ Position 99: gamma = 5  → corrected_gamma = 1 (最后一个)
 
 ---
 
-## 4. 多 EOS Token 支持
+## 4. 熵自适应 Gamma（EGAG）
+
+### 4.1 动机
+
+固定 $\gamma$ 在困难 token 上浪费草稿（高否决率），在简单 token 上又无法充分并行。
+
+### 4.2 核心做法
+
+对 drafter 的当前 logits 计算熵 $H$，映射为动态 $\gamma$：
+
+$$H=-\sum_i p_i \log p_i$$
+$$H_{norm}=\frac{H}{\log V}$$
+$$\gamma=\lfloor (1-H_{norm})\cdot \gamma_{max} \rfloor,\ \gamma\ge 1$$
+
+### 4.3 实现要点
+
+- 在生成草稿前计算一次熵并更新 $\gamma$。
+- 建议使用上下界 $[\gamma_{min}, \gamma_{max}]$。
+- 可使用 EMA 平滑避免频繁抖动。
+
+**CLI 参数（infer.py）**
+- `/egag`
+- `/egag_gamma_min <value>`
+- `/egag_gamma_max <value>`
+- `/egag_ema <value>`
+
+### 4.4 适用场景
+
+- 生成任务不稳定、接收率波动大时。
+- 多样性较高、内容难度起伏较大的文本。
+
+---
+
+## 5. 多 EOS Token 支持
 
 ### 4.1 背景
 
@@ -192,7 +226,7 @@ if torch.isin(x, stop_tokens):
 
 ---
 
-## 5. Ngram 回退策略
+## 6. Ngram 回退策略
 
 ### 5.1 问题
 
@@ -237,7 +271,7 @@ def next_token(self, input_ids: torch.Tensor) -> Tuple[torch.Tensor, torch.Tenso
 
 ---
 
-## 6. Top-K Filler
+## 7. Top-K Filler
 
 ### 6.1 问题
 
@@ -279,7 +313,7 @@ for i in range(n):
 
 ---
 
-## 7. 跳过样本调整
+## 8. 跳过样本调整
 
 ### 7.1 作用
 
@@ -312,7 +346,7 @@ else:
 
 ---
 
-## 8. 其他实现技巧
+## 9. 其他实现技巧
 
 ### 8.1 KV Cache 一致性
 
@@ -381,7 +415,7 @@ r = torch.rand(corrected_gamma, device=target.device)
 
 ---
 
-## 9. 小结
+## 10. 小结
 
 ### 优化技巧总结
 
@@ -390,6 +424,7 @@ r = torch.rand(corrected_gamma, device=target.device)
 | 并行 Token 验证 | `sampling/speculative_decoding.py` | 129-136 | ⭐⭐⭐⭐⭐ |
 | 首次 Target Pass | `sampling/speculative_decoding.py` | 84-103 | ⭐⭐ |
 | 动态 Gamma 调整 | `sampling/speculative_decoding.py` | 106 | ⭐ |
+| EGAG（熵自适应） | `sampling/speculative_decoding.py` | 待实现 | ⭐⭐⭐ |
 | Top-K Filler | `ngram_assisted/ngram_assisted.py` | 151-155 | ⭐⭐⭐ |
 | Ngram 回退策略 | `ngram_assisted/ngram_storage.py` | 171-177 | ⭐⭐ |
 
@@ -398,6 +433,7 @@ r = torch.rand(corrected_gamma, device=target.device)
 1. **默认启用**：`first_target=True`
 2. **调整 Gamma**：根据接受率动态调整
 3. **使用 Top-K Filler**：`filler_top_k=3` 作为起点
+4. **自适应策略**：优先实现 EGAG
 4. **启用 Cache**：`use_cache=True`（注意已知问题）
 5. **多结束符支持**：使用列表指定所有结束符
 

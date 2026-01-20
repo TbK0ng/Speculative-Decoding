@@ -8,7 +8,8 @@
 - [4. Logits Processor 设计](#4-logits-processor-设计)
 - [5. KV Cache 管理](#5-kv-cache-管理)
 - [6. 调试与可视化](#6-调试与可视化)
-- [7. 小结](#7-小结)
+- [7. 扩展：EGAG 集成点](#7-扩展egag-集成点)
+- [8. 小结](#8-小结)
 
 ---
 
@@ -30,7 +31,7 @@ utils/
 ### 1.2 函数签名
 
 ```python
-# sampling/speculative_decoding.py:23-37
+# sampling/speculative_decoding.py:23-58
 @torch.no_grad()
 def speculative_generate(
     inputs: List[int],              # 输入序列
@@ -38,6 +39,10 @@ def speculative_generate(
     target: Module,                 # Target 模型
     tokenizer = None,               # Tokenizer（调试用）
     gamma: int = 5,                 # 草稿数量
+    use_egag: bool = False,          # 启用 EGAG
+    gamma_min: int = 1,              # EGAG 最小 gamma
+    gamma_max: int | None = None,    # EGAG 最大 gamma
+    egag_ema_beta: float = 0.0,      # EGAG 平滑
     logits_processor: LogitsProcessor = GreedyProcessor(),
     max_gen_len: int = 40,
     eos_tokens_id: int | List[int] = 1,  # 支持多个结束符
@@ -515,7 +520,26 @@ Generated: "Paris, and..."
 
 ---
 
-## 7. 小结
+## 7. 扩展：EGAG 集成点
+
+### 7.1 EGAG（熵自适应 $\gamma$）
+
+**集成位置**：主循环内，在草稿生成前。
+
+- 使用 drafter 的当前 logits 计算熵并更新 $\gamma$。
+- 需要保证 $\gamma$ 的上下界与序列末尾的 `corrected_gamma` 同步。
+- 建议记录每步 $H_{norm}$ 与 $\gamma$ 以便实验分析。
+
+**涉及模块**：
+- `speculative_generate()`
+- `LogitsProcessor`（可复用 softmax 或采样逻辑）
+
+**新增参数**：
+- `use_egag`
+- `gamma_min`, `gamma_max`
+- `egag_ema_beta`
+
+## 8. 小结
 
 ### 关键实现要点
 
@@ -529,7 +553,7 @@ Generated: "Paris, and..."
 
 | 功能 | 文件 | 行号 |
 |------|------|------|
-| 主函数 | `sampling/speculative_decoding.py` | 23-189 |
+| 主函数 | `sampling/speculative_decoding.py` | 23-260 |
 | 样本调整 | `sampling/speculative_decoding.py` | 10-19 |
 | 草稿生成 | `sampling/speculative_decoding.py` | 112-126 |
 | 并行验证 | `sampling/speculative_decoding.py` | 129-137 |

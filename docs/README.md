@@ -36,6 +36,8 @@
 | 文档 | 描述 |
 |------|------|
 | [API 参考手册](./api-reference.md) | 完整的 API 函数和类参考 |
+| [参考整理](./refer.md) | 研究方向、baseline 与两项创新点整理 |
+| [实施计划](./plan.md) | EGAG 实施与实验计划 |
 
 ## 学习路径建议
 
@@ -121,6 +123,131 @@ uv run infer.py
 - 输入文本让模型生成
 - 输入 `/help` 查看所有命令
 - 输入 `/quit` 退出
+
+## CLI 命令速查
+
+**生成控制**
+- `/speculative`：切换 Speculative Decoding
+- `/target`：切换 target 自回归
+- `/drafter`：切换 drafter 自回归
+- `/length <value>`：设置生成长度
+- `/gamma <value>`：设置固定 $\gamma$
+
+**EGAG（熵自适应）**
+- `/egag`：切换 EGAG
+- `/egag_gamma_min <value>`：最小 $\gamma$
+- `/egag_gamma_max <value>`：最大 $\gamma$
+- `/egag_ema <value>`：EMA 平滑系数
+
+**采样器与调试**
+- `/processor <name> [args...]`：切换采样器（greedy/multinomial/topk/nucleus/topknucleus）
+- `/debug`：切换调试输出
+- `/cache`：切换 KV cache
+
+**N‑gram 辅助**
+- `/ngram`：切换 N‑gram assisted generation
+- `/top_k_filler <value>`：设置 N‑gram 更新 top‑k
+- `/set_ngramstorage <basic/onelevel> <n>`：设置 N‑gram 类型与阶数
+- `/reset_in_between`：切换每次生成后重置 N‑gram
+
+## 消融实验说明
+
+你要比较“原方法 vs 加入 EGAG”的速度与质量差异，这属于**消融实验**。
+推荐对比组：
+- Baseline：仅 Speculative Decoding（固定 $\gamma$）
+- EGAG：仅开启熵自适应
+
+## 消融实验命令示例
+
+**Baseline（固定 $\gamma$）**
+- `/speculative`
+- `/egag`（确保为关闭状态）
+- `/gamma 4`
+
+**EGAG only**
+- `/egag`
+- `/egag_gamma_min 1`
+- `/egag_gamma_max 6`
+- `/egag_ema 0.9`
+
+## 论文实验命令（完整）
+
+以下均以交互式 CLI 为入口。先启动：
+
+```
+uv run infer.py
+```
+
+然后在 CLI 中输入对应命令。
+
+**1) Target AR（自回归基线）**
+
+```
+/speculative    # 关闭 Speculative（若为 True 则输入一次）
+/ngram          # 关闭 N-gram（若为 True 则输入一次）
+/target         # 保持 target 生成开启
+```
+
+**2) Speculative（固定 $\gamma$ baseline）**
+
+```
+/speculative    # 打开 Speculative（若为 False 则输入一次）
+/ngram          # 关闭 N-gram（若为 True 则输入一次）
+/egag           # 确保关闭
+/gamma 4
+```
+
+**3) EGAG（仅熵自适应）**
+
+```
+/speculative
+/ngram
+/egag
+/egag_gamma_min 1
+/egag_gamma_max 6
+/egag_ema 0.9
+```
+
+**4) NASD（N‑gram Assisted baseline）**
+
+```
+/ngram
+/speculative     # 可关闭 Speculative，仅跑 NASD
+/set_ngramstorage basic 3
+/top_k_filler 3
+```
+
+## 批量消融脚本（非交互）
+
+已提供 PowerShell 脚本，可一次性跑完整套消融：
+
+```
+pwsh ./scripts/run_ablation.ps1
+```
+
+可指定自定义 prompt：
+
+```
+pwsh ./scripts/run_ablation.ps1 -Prompt "Translate to English: Je m'appelle Romain."
+```
+
+默认使用：
+
+```
+uv run infer.py --device cuda
+```
+
+如需覆盖：
+
+```
+pwsh ./scripts/run_ablation.ps1 -Runner "uv run infer.py --device cpu"
+```
+
+脚本会输出汇总 CSV：
+
+```
+./scripts/ablation_results.csv
+```
 
 ## 参考资料
 

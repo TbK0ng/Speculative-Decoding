@@ -67,7 +67,7 @@ output = autoregressive_generate(
 
 ### 1.2 speculative_generate
 
-**文件**: `sampling/speculative_decoding.py:23-189`
+**文件**: `sampling/speculative_decoding.py:23-231`
 
 **函数签名**:
 
@@ -79,6 +79,10 @@ def speculative_generate(
     target: Module,
     tokenizer = None,
     gamma: int = 5,
+    use_egag: bool = False,
+    gamma_min: int = 1,
+    gamma_max: int | None = None,
+    egag_ema_beta: float = 0.0,
     logits_processor: LogitsProcessor = GreedyProcessor(),
     max_gen_len: int = 40,
     eos_tokens_id: int | List[int] = 1,
@@ -99,6 +103,10 @@ def speculative_generate(
 | `target` | `Module` | 必填 | Target 模型 |
 | `tokenizer` | `Tokenizer` | `None` | Tokenizer（调试用） |
 | `gamma` | `int` | `5` | 草稿数量 |
+| `use_egag` | `bool` | `False` | 启用 EGAG（熵自适应 gamma） |
+| `gamma_min` | `int` | `1` | EGAG 最小 gamma |
+| `gamma_max` | `int or None` | `None` | EGAG 最大 gamma（默认使用 `gamma`） |
+| `egag_ema_beta` | `float` | `0.0` | EGAG EMA 平滑系数 |
 | `logits_processor` | `LogitsProcessor` | `GreedyProcessor()` | Logits 处理器 |
 | `max_gen_len` | `int` | `40` | 最大生成长度 |
 | `eos_tokens_id` | `int or List[int]` | `1` | 结束 token ID（支持多个） |

@@ -171,7 +171,7 @@ class NGramStorage(INgramStorage):
             for j in range(min(self.n - 1, seq.shape[0]), 1, -1):    
                 gram = tuple(seq[-j:].tolist())
                 
-                if gram in self.ngrams[j]:
+                if j in self.ngrams and gram in self.ngrams[j]:
                     out[i] = self.ngrams[j][gram]
                     known[i] = True
                     break
